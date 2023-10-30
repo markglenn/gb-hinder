@@ -14,7 +14,7 @@ impl CPU {
     pub fn new(bus: Bus) -> CPU {
         CPU {
             registers: Registers::new(),
-            pc: 0,
+            pc: 0x100,
             sp: 0xFFFE,
             bus,
         }

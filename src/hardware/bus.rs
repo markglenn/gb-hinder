@@ -22,7 +22,7 @@ impl Bus {
         Bus {
             mbc,
             internal_ram,
-            boot_rom: Some(BootROM::new()),
+            boot_rom: None, //Some(BootROM::new()),
             vram,
             zero_page,
             io,

@@ -11,7 +11,7 @@ use self::{
     bits::{prefix_cb, rl},
     call::{call, ret},
     cp::cp,
-    jr::{jr, JumpRelativeCondition},
+    jr::{jp, jr},
     ld::{ld, ld16, ldd, ldh, ldi},
     stack::{pop, push},
     xor::xor,
@@ -118,6 +118,26 @@ impl Target16 {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum Condition {
+    NotZero,
+    Zero,
+    NotCarry,
+    Carry,
+    None,
+}
+
+impl Condition {
+    pub fn test(&self, cpu: &CPU) -> bool {
+        match self {
+            Condition::NotZero => !cpu.registers.f.zero(),
+            Condition::Zero => cpu.registers.f.zero(),
+            Condition::NotCarry => !cpu.registers.f.carry(),
+            Condition::Carry => cpu.registers.f.carry(),
+            Condition::None => true,
+        }
+    }
+}
+#[derive(Debug, Clone, Copy)]
 pub enum Opcode {
     NOP,
     CALL,
@@ -135,7 +155,8 @@ pub enum Opcode {
     PUSH(Target16),
     POP(Target16),
     RL(Target),
-    JR(JumpRelativeCondition),
+    JR(Condition),
+    JP(Condition, Target16),
     PrefixCB,
     CP(Target),
     Undefined,
@@ -165,6 +186,7 @@ pub fn execute_opcode(cpu: &mut CPU, opcode: &Opcode) -> u8 {
 
         Opcode::PrefixCB => prefix_cb(cpu),
 
+        Opcode::JP(condition, target) => jp(cpu, condition, target),
         Opcode::JR(condition) => jr(cpu, condition),
         Opcode::LD(target, from) => ld(cpu, target, from),
         Opcode::INC(target) => inc::inc(cpu, target),
@@ -188,7 +210,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
-    Opcode::Undefined,
+    Opcode::INC(Target::B),
     Opcode::DEC(Target::B),
     Opcode::LD(Target::B, Target::Immediate),
     Opcode::Undefined,
@@ -197,7 +219,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::INC(Target::C),
-    Opcode::Undefined,
+    Opcode::DEC(Target::C),
     Opcode::LD(Target::C, Target::Immediate),
     Opcode::Undefined,
     // 0x10 - 0x1F
@@ -209,16 +231,16 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::RL(Target::A),
-    Opcode::Undefined,
+    Opcode::JR(Condition::None),
     Opcode::Undefined,
     Opcode::LD(Target::A, Target::MDE),
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
-    Opcode::Undefined,
+    Opcode::LD(Target::E, Target::Immediate),
     Opcode::Undefined,
     // 0x20 - 0x2F
-    Opcode::JR(JumpRelativeCondition::NotZero),
+    Opcode::JR(Condition::NotZero),
     Opcode::LD16(Target16::HL, Target16::Immediate),
     Opcode::LDI(Target::MHL, Target::A),
     Opcode::INC(Target::MHL),
@@ -226,13 +248,13 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
+    Opcode::JR(Condition::Zero),
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
-    Opcode::Undefined,
-    Opcode::Undefined,
+    Opcode::LD(Target::L, Target::Immediate),
     Opcode::Undefined,
     // 0x30 - 0x3F
     Opcode::Undefined,
@@ -276,7 +298,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
-    Opcode::Undefined,
+    Opcode::LD(Target::D, Target::A),
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
@@ -293,7 +315,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
-    Opcode::Undefined,
+    Opcode::LD(Target::H, Target::A),
     Opcode::Undefined,
     Opcode::Undefined,
     Opcode::Undefined,
@@ -391,7 +413,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::Undefined,
     Opcode::POP(Target16::BC),
     Opcode::Undefined,
-    Opcode::Undefined,
+    Opcode::JP(Condition::NotZero, Target16::Immediate),
     Opcode::Undefined,
     Opcode::PUSH(Target16::BC),
     Opcode::Undefined,
@@ -439,7 +461,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::Undefined,
     Opcode::Undefined,
     // 0xF0 - 0xFF
-    Opcode::Undefined,
+    Opcode::LDH(Target::A, Target::ZeroImmediate),
     Opcode::Undefined,
     Opcode::LD(Target::A, Target::MC),
     Opcode::Undefined,
