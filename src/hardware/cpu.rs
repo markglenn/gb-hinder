@@ -47,14 +47,30 @@ impl CPU {
     pub fn push_byte(&mut self, value: u8) {
         let mut sp = self.sp;
 
-        sp -= 1;
+        sp = sp.wrapping_sub(1);
 
         self.sp = sp;
         self.bus.write(sp, value);
     }
 
+    pub fn pop_byte(&mut self) -> u8 {
+        let sp = self.sp;
+        let value = self.bus.read(sp);
+
+        self.sp = sp.wrapping_add(1);
+
+        value
+    }
+
     pub fn push_word(&mut self, value: u16) {
         self.push_byte((value >> 8) as u8);
         self.push_byte(value as u8);
+    }
+
+    pub fn pop_word(&mut self) -> u16 {
+        let low = self.pop_byte() as u16;
+        let high = self.pop_byte() as u16;
+
+        low | (high << 8)
     }
 }

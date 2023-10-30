@@ -23,3 +23,10 @@ pub fn ldh(cpu: &mut CPU, target: &Target, from: &Target) {
     let value = from.get_value(cpu);
     target.set_value(cpu, value);
 }
+
+pub fn ldi(cpu: &mut CPU, target: &Target, from: &Target) {
+    let value = from.get_value(cpu);
+    target.set_value(cpu, value);
+
+    cpu.registers.set_hl(cpu.registers.hl().wrapping_add(1));
+}

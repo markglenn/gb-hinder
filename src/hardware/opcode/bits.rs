@@ -1,10 +1,13 @@
 use crate::hardware::{cpu::CPU, Memory};
 
+use super::Target;
+
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum CBOpcode {
     RLC,
     RRC,
-    RL,
+    RL(Target),
     RR,
     SLA,
     SRA,
@@ -18,12 +21,14 @@ pub enum CBOpcode {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum BitStatus {
     High,
     Low,
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum BitTarget {
     A,
     B,
@@ -34,6 +39,8 @@ pub enum BitTarget {
     L,
     MHL,
 }
+
+#[allow(dead_code)]
 impl BitTarget {
     pub fn get_value(self, cpu: &mut CPU) -> u8 {
         match self {
@@ -51,15 +58,16 @@ impl BitTarget {
 
 pub fn prefix_cb(cpu: &mut CPU) {
     let op = cpu.next_byte();
-    let opcode = CB_OPCODES[op as usize];
+    let opcode = &CB_OPCODES[op as usize];
 
     match opcode {
         CBOpcode::BIT(BitStatus::High, target, bit) => bit_h(cpu, target, bit),
-        _ => panic!("Unimplemented opcode: {:?}", opcode),
+        CBOpcode::RL(target) => rl(cpu, target),
+        _ => panic!("Unimplemented bit opcode: 0x{:02X}", op),
     }
 }
 
-pub fn bit_h(cpu: &mut CPU, target: BitTarget, bit: u8) {
+fn bit_h(cpu: &mut CPU, target: &BitTarget, bit: &u8) {
     let value = match target {
         BitTarget::A => cpu.registers.a,
         BitTarget::B => cpu.registers.b,
@@ -76,6 +84,19 @@ pub fn bit_h(cpu: &mut CPU, target: BitTarget, bit: u8) {
     cpu.registers.f.set_zero(result == 0);
     cpu.registers.f.set_subtract(false);
     cpu.registers.f.set_half_carry(true);
+}
+
+pub fn rl(cpu: &mut CPU, target: &Target) {
+    let value = target.get_value(cpu);
+
+    let result = value.rotate_left(1);
+
+    cpu.registers.f.set_zero(result == 0);
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(value & 0x80 != 0);
+
+    target.set_value(cpu, value);
 }
 
 pub static CB_OPCODES: [CBOpcode; 0x100] = [
@@ -98,7 +119,7 @@ pub static CB_OPCODES: [CBOpcode; 0x100] = [
     CBOpcode::Undefined,
     // 0x10
     CBOpcode::Undefined,
-    CBOpcode::Undefined,
+    CBOpcode::RL(Target::C),
     CBOpcode::Undefined,
     CBOpcode::Undefined,
     CBOpcode::Undefined,

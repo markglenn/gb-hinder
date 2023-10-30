@@ -1,5 +1,3 @@
-use std::io;
-
 use super::{boot_rom::BootROM, cartridge::Cartridge, io::IO, mbc::MBC1, Memory, RAM};
 
 // The gameboy does not necessarily have a bus, but a bus is a close

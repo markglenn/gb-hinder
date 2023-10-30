@@ -7,3 +7,9 @@ pub fn call(cpu: &mut CPU) {
     cpu.push_word(cpu.pc);
     cpu.pc = address;
 }
+
+pub fn ret(cpu: &mut CPU) {
+    let address = cpu.pop_word();
+
+    cpu.pc = address;
+}
