@@ -6,6 +6,9 @@ pub struct CPU {
     pub registers: Registers,
     pub pc: u16,
     pub sp: u16,
+    pub ime: bool,
+
+    pub halted: bool,
 
     pub bus: Bus,
 }
@@ -17,6 +20,8 @@ impl CPU {
             pc: 0x100,
             sp: 0xFFFE,
             bus,
+            ime: false,
+            halted: false,
         }
     }
 
@@ -72,5 +77,9 @@ impl CPU {
         let high = self.pop_byte() as u16;
 
         low | (high << 8)
+    }
+
+    pub fn set_halted(&mut self, halted: bool) {
+        self.halted = halted;
     }
 }

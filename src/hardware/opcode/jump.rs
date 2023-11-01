@@ -2,6 +2,28 @@ use crate::hardware::cpu::CPU;
 
 use super::{Condition, Target16};
 
+pub fn call(cpu: &mut CPU, condition: &Condition) {
+    let address = cpu.next_word();
+
+    if condition.test(cpu) {
+        cpu.push_word(cpu.pc);
+        cpu.pc = address;
+    }
+}
+
+pub fn ret(cpu: &mut CPU, condition: &Condition) {
+    let address = cpu.pop_word();
+
+    if condition.test(cpu) {
+        cpu.pc = address;
+    }
+}
+
+pub fn rst(cpu: &mut CPU, address: u16) {
+    cpu.push_word(cpu.pc);
+    cpu.pc = address;
+}
+
 pub fn jr(cpu: &mut CPU, condition: &Condition) {
     let offset = cpu.next_byte() as i8;
 

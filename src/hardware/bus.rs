@@ -1,3 +1,6 @@
+use super::io::serial::Serial;
+use super::io::timer::Timer;
+use super::io::Interrupts;
 use super::{boot_rom::BootROM, cartridge::Cartridge, io::IO, mbc::MBC1, Memory, RAM};
 
 // The gameboy does not necessarily have a bus, but a bus is a close
@@ -9,23 +12,25 @@ pub struct Bus {
     zero_page: RAM,
     boot_rom: Option<BootROM>,
     io: IO,
+    timer: Timer,
+    interrupts: Interrupts,
+    serial: Serial,
 }
 
 impl Bus {
     pub fn new(cartridge: Cartridge) -> Bus {
-        let internal_ram = RAM::new(0x2000);
         let mbc = MBC1::new(cartridge);
-        let vram = RAM::new(0x2000);
-        let io = IO {};
-        let zero_page = RAM::new(0x7F);
 
         Bus {
             mbc,
-            internal_ram,
+            internal_ram: RAM::new(0x2000),
             boot_rom: None, //Some(BootROM::new()),
-            vram,
-            zero_page,
-            io,
+            vram: RAM::new(0x2000),
+            zero_page: RAM::new(0x7F),
+            io: IO {},
+            timer: Timer {},
+            interrupts: Interrupts::new(),
+            serial: Serial::new(),
         }
     }
 }
@@ -52,11 +57,20 @@ impl Memory for Bus {
             // Echo RAM
             0xE000..=0xFDFF => self.internal_ram.read(address - 0xE000),
 
+            // Serial transfer
+            0xFF01..=0xFF02 => self.serial.read(address),
+
+            // Timer
+            0xFF04..=0xFF07 => self.timer.read(address),
+
             // IO Ports
             0xFF00..=0xFF7F => self.io.read(address),
 
             // Zero Page
             0xFF80..=0xFFFE => self.zero_page.read(address - 0xFF80),
+
+            // Interrupt enabled register
+            0xFFFF => self.interrupts.into(),
 
             _ => panic!("Attempted to read from invalid address: 0x{:04X}", address),
         }
@@ -79,11 +93,23 @@ impl Memory for Bus {
             // Disable boot ROM when writing to this I/O address
             0xFF50 => self.boot_rom = None,
 
+            // Serial transfer
+            0xFF01..=0xFF02 => self.serial.write(address, value),
+
+            // Timer
+            0xFF04..=0xFF07 => self.timer.write(address, value),
+
+            // Interrupt status
+            0xFF0F => self.interrupts.set_status(value),
+
             // IO Ports
             0xFF00..=0xFF7F => self.io.write(address, value),
 
             // Zero Page
             0xFF80..=0xFFFE => self.zero_page.write(address - 0xFF80, value),
+
+            // Interrupt enabled register
+            0xFFFF => self.interrupts = value.into(),
 
             _ => panic!("Attempted to write to invalid address: 0x{:04X}", address),
         }

@@ -86,6 +86,20 @@ fn bit_h(cpu: &mut CPU, target: &BitTarget, bit: &u8) {
     cpu.registers.f.set_half_carry(true);
 }
 
+pub fn rra(cpu: &mut CPU) {
+    let a = cpu.registers.a;
+
+    let newcarry = (a & 1) != 0;
+    let oldcarry = cpu.registers.f.carry() as u8;
+
+    cpu.registers.a = (a >> 1) | (oldcarry << 7);
+
+    cpu.registers.f.set_zero(false);
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(newcarry);
+}
+
 pub fn rl(cpu: &mut CPU, target: &Target) {
     let value = target.get_value(cpu);
 

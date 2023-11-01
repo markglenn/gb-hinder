@@ -30,3 +30,8 @@ pub fn inc16(cpu: &mut CPU, target: &Target16) {
     let value = target.get_value(cpu);
     target.set_value(cpu, value.wrapping_add(1));
 }
+
+pub fn dec16(cpu: &mut CPU, target: &Target16) {
+    let value = target.get_value(cpu);
+    target.set_value(cpu, value.wrapping_sub(1));
+}

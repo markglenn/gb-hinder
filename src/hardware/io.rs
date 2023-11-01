@@ -1,6 +1,45 @@
+pub mod serial;
+pub mod timer;
+
 use super::Memory;
 
 pub struct IO {}
+
+use bitfield_struct::bitfield;
+
+#[bitfield(u8)]
+pub struct Flags {
+    #[bits(4)]
+    _ignore: usize,
+
+    pub carry: bool,
+    pub half_carry: bool,
+    pub subtract: bool,
+    pub zero: bool,
+}
+
+#[bitfield(u8)]
+pub struct Interrupts {
+    #[bits(3)]
+    _ignore: usize,
+
+    vblank: bool,
+    lcd: bool,
+    timer: bool,
+    serial: bool,
+    joypad: bool,
+}
+
+impl Interrupts {
+    pub fn status(&self) -> u8 {
+        // TODO: Get interrupt statuses
+        0
+    }
+
+    pub fn set_status(&self, _value: u8) {
+        // TODO: Set interrupt statuses
+    }
+}
 
 impl Memory for IO {
     fn read(&self, address: u16) -> u8 {
