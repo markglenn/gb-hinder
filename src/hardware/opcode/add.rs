@@ -84,6 +84,22 @@ pub fn sub(cpu: &mut CPU, target: &Target) {
     cpu.registers.f.set_carry(carry);
 }
 
+pub fn sbc(cpu: &mut CPU, target: &Target) {
+    let a = cpu.registers.a;
+    let b = target.get_value(cpu);
+    let c = if cpu.registers.f.carry() { 1 } else { 0 };
+    let r = a.wrapping_sub(b).wrapping_sub(c);
+
+    cpu.registers.f.set_zero(r == 0);
+    cpu.registers.f.set_half_carry((a & 0x0F) < (b & 0x0F) + c);
+    cpu.registers.f.set_subtract(true);
+    cpu.registers
+        .f
+        .set_carry((a as u16) < (b as u16) + (c as u16));
+
+    cpu.registers.a = r;
+}
+
 pub fn daa(cpu: &mut CPU) {
     let mut a = cpu.registers.a;
     let mut adjust = if cpu.registers.f.carry() { 0x60 } else { 0x00 };

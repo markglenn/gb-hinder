@@ -5,8 +5,7 @@ use hardware::cartridge::Cartridge;
 use crate::hardware::{bus::Bus, cpu::CPU};
 
 fn main() {
-    //let bus = Bus::new(Cartridge::from_path("priv/06-ld r,r.gb").unwrap());
-    let bus = Bus::new(Cartridge::from_path("priv/03-op sp,hl.gb").unwrap());
+    let bus = Bus::new(Cartridge::from_path("priv/04-op r,imm.gb").unwrap());
     let mut cpu = CPU::new(bus);
 
     loop {
