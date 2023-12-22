@@ -20,27 +20,6 @@ pub enum Target {
     MImmediate,
 }
 
-impl Display for Target {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Target::A => write!(f, "A"),
-            Target::B => write!(f, "B"),
-            Target::C => write!(f, "C"),
-            Target::D => write!(f, "D"),
-            Target::E => write!(f, "E"),
-            Target::H => write!(f, "H"),
-            Target::L => write!(f, "L"),
-            Target::MC => write!(f, "(C)"),
-            Target::MBC => write!(f, "(BC)"),
-            Target::MDE => write!(f, "(DE)"),
-            Target::MHL => write!(f, "(HL)"),
-            Target::Immediate => write!(f, "Imm"),
-            Target::MImmediate => write!(f, "(Imm)"),
-            Target::ZeroImmediate => write!(f, "(0xFF00 + Imm)"),
-        }
-    }
-}
-
 impl Target {
     pub fn get_value(self, cpu: &mut CPU) -> u8 {
         match self {
@@ -91,6 +70,46 @@ impl Target {
             Target::Immediate => unreachable!(),
         }
     }
+
+    pub fn debug_fmt(&self, cpu: &CPU) -> String {
+        match self {
+            Target::A => "A".to_owned(),
+            Target::B => "B".to_owned(),
+            Target::C => "C".to_owned(),
+            Target::D => "D".to_owned(),
+            Target::E => "E".to_owned(),
+            Target::H => "H".to_owned(),
+            Target::L => "L".to_owned(),
+            Target::MC => "(FF00 + C)".to_owned(),
+            Target::MBC => "(BC)".to_owned(),
+            Target::MDE => "(DE)".to_owned(),
+            Target::MHL => "(HL)".to_owned(),
+            Target::Immediate => format!("{:02X}", cpu.bus.read(cpu.pc)),
+            Target::MImmediate => format!("[{:04X}]", cpu.bus.read_word(cpu.pc)),
+            Target::ZeroImmediate => format!("[{:02X}]", cpu.bus.read(cpu.pc)),
+        }
+    }
+}
+
+impl Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Target::A => write!(f, "A"),
+            Target::B => write!(f, "B"),
+            Target::C => write!(f, "C"),
+            Target::D => write!(f, "D"),
+            Target::E => write!(f, "E"),
+            Target::H => write!(f, "H"),
+            Target::L => write!(f, "L"),
+            Target::MC => write!(f, "(FF00 + C)"),
+            Target::MBC => write!(f, "(BC)"),
+            Target::MDE => write!(f, "(DE)"),
+            Target::MHL => write!(f, "(HL)"),
+            Target::Immediate => write!(f, "d8"),
+            Target::MImmediate => write!(f, "(d16)"),
+            Target::ZeroImmediate => write!(f, "(FF00 + d8)"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -100,6 +119,7 @@ pub enum Target16 {
     DE,
     HL,
     SP,
+    MHL,
     Immediate,
 }
 
@@ -111,6 +131,7 @@ impl Target16 {
             Target16::DE => cpu.registers.de(),
             Target16::HL => cpu.registers.hl(),
             Target16::SP => cpu.sp,
+            Target16::MHL => cpu.bus.read_word(cpu.registers.hl()),
             Target16::Immediate => cpu.next_word(),
         }
     }
@@ -122,7 +143,34 @@ impl Target16 {
             Target16::DE => cpu.registers.set_de(value),
             Target16::HL => cpu.registers.set_hl(value),
             Target16::SP => cpu.sp = value,
+            Target16::MHL => unreachable!(),
             Target16::Immediate => unreachable!(),
+        }
+    }
+
+    pub fn debug_fmt(&self, cpu: &CPU) -> String {
+        match self {
+            Target16::AF => "AF".to_owned(),
+            Target16::BC => "BC".to_owned(),
+            Target16::DE => "DE".to_owned(),
+            Target16::HL => "HL".to_owned(),
+            Target16::SP => "SP".to_owned(),
+            Target16::MHL => "[HL]".to_owned(),
+            Target16::Immediate => format!("{:04X}", cpu.bus.read_word(cpu.pc)),
+        }
+    }
+}
+
+impl Display for Target16 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Target16::AF => write!(f, "AF"),
+            Target16::BC => write!(f, "BC"),
+            Target16::DE => write!(f, "DE"),
+            Target16::HL => write!(f, "HL"),
+            Target16::SP => write!(f, "SP"),
+            Target16::MHL => write!(f, "(HL)"),
+            Target16::Immediate => write!(f, "d16"),
         }
     }
 }
@@ -144,6 +192,18 @@ impl Condition {
             Condition::NotCarry => !cpu.registers.f.carry(),
             Condition::Carry => cpu.registers.f.carry(),
             Condition::None => true,
+        }
+    }
+}
+
+impl Display for Condition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Condition::NotZero => write!(f, "NZ,"),
+            Condition::Zero => write!(f, "Z,"),
+            Condition::NotCarry => write!(f, "NC"),
+            Condition::Carry => write!(f, "C"),
+            Condition::None => write!(f, ""),
         }
     }
 }

@@ -57,6 +57,9 @@ impl Memory for Bus {
             // Echo RAM
             0xE000..=0xFDFF => self.internal_ram.read(address - 0xE000),
 
+            // Object Attribute Memory (OAM)
+            0xFE00..=0xFE9F => 0, //self.io.write(address, value),
+
             // Serial transfer
             0xFF01..=0xFF02 => self.serial.read(address),
 
@@ -89,6 +92,9 @@ impl Memory for Bus {
 
             // Echo RAM
             0xE000..=0xFDFF => self.internal_ram.write(address - 0xE000, value),
+
+            // Object Attribute Memory (OAM)
+            0xFE00..=0xFE9F => {} //self.io.write(address, value),
 
             // Disable boot ROM when writing to this I/O address
             0xFF50 => self.boot_rom = None,

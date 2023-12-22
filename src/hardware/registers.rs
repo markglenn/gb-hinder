@@ -1,9 +1,11 @@
+use std::fmt::Display;
+
 use bitfield_struct::bitfield;
 
 #[bitfield(u8)]
 pub struct Flags {
     #[bits(4)]
-    _ignore: usize,
+    pub ignore: usize,
 
     pub carry: bool,
     pub half_carry: bool,
@@ -11,6 +13,20 @@ pub struct Flags {
     pub zero: bool,
 }
 
+impl Display for Flags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}{}{}{}",
+            if self.zero() { "Z" } else { "-" },
+            if self.subtract() { "N" } else { "-" },
+            if self.half_carry() { "H" } else { "-" },
+            if self.carry() { "C" } else { "-" },
+        )
+    }
+}
+
+#[derive(Debug)]
 pub struct Registers {
     pub a: u8,
     pub b: u8,
@@ -24,15 +40,21 @@ pub struct Registers {
 
 impl Registers {
     pub fn new() -> Registers {
+        let mut f = Flags::new();
+        f.set_ignore(0);
+        f.set_zero(true);
+        f.set_half_carry(true);
+        f.set_carry(true);
+
         Registers {
-            a: 0x00,
+            a: 0x01,
             b: 0x00,
-            c: 0x00,
+            c: 0x13,
             d: 0x00,
-            e: 0x00,
-            f: Flags::new(),
-            h: 0x00,
-            l: 0x00,
+            e: 0xD8,
+            f,
+            h: 0x01,
+            l: 0x4D,
         }
     }
 
@@ -74,6 +96,22 @@ impl Registers {
     }
 }
 
+impl Display for Registers {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X}",
+            self.a,
+            u8::from(self.f),
+            self.b,
+            self.c,
+            self.d,
+            self.e,
+            self.h,
+            self.l,
+        )
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

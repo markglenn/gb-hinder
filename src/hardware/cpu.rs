@@ -11,6 +11,8 @@ pub struct CPU {
     pub halted: bool,
 
     pub bus: Bus,
+    pub instr_count: usize,
+    debug: bool,
 }
 
 impl CPU {
@@ -22,15 +24,38 @@ impl CPU {
             bus,
             ime: false,
             halted: false,
+            instr_count: 0,
+            debug: true,
         }
     }
 
     pub fn execute_next_instruction(&mut self) -> u8 {
         let original_pc = self.pc;
+        let m0 = self.peek_byte_at_offset(0);
+        let m1 = self.peek_byte_at_offset(1);
+        let m2 = self.peek_byte_at_offset(2);
+        let m3 = self.peek_byte_at_offset(3);
+
         let op = self.next_byte();
 
         let opcode = Opcode::from_byte(op);
-        println!("0x{:04X} - 0x{:02X} {:?}", original_pc, op, opcode);
+
+        if self.debug {
+            println!(
+                "{} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+                self.registers, self.sp, original_pc, m0, m1, m2, m3
+            );
+        }
+
+        self.instr_count += 1;
+
+        if self.instr_count == 100000 {
+            // panic!("100 instructions executed")
+        }
+
+        // Wait for key input to pause the emulator
+        let mut input = String::new();
+
         execute_opcode(self, opcode)
     }
 
@@ -47,6 +72,30 @@ impl CPU {
         let high = self.next_byte() as u16;
 
         low | (high << 8)
+    }
+
+    pub fn peek_byte(&self) -> u8 {
+        self.bus.read(self.pc)
+    }
+
+    pub fn peek_byte_at_offset(&self, offset: u16) -> u8 {
+        self.bus.read(self.pc + offset)
+    }
+
+    pub fn peek_word(&self) -> u16 {
+        let low = self.bus.read(self.pc) as u16;
+        let high = self.bus.read(self.pc + 1) as u16;
+
+        low | (high << 8)
+    }
+
+    pub fn peek_double(&self) -> u32 {
+        let low = self.bus.read(self.pc) as u32;
+        let high = self.bus.read(self.pc + 1) as u32;
+        let low2 = self.bus.read(self.pc + 2) as u32;
+        let high2 = self.bus.read(self.pc + 3) as u32;
+
+        low | (high << 8) | (low2 << 16) | (high2 << 24)
     }
 
     pub fn push_byte(&mut self, value: u8) {
@@ -81,5 +130,9 @@ impl CPU {
 
     pub fn set_halted(&mut self, halted: bool) {
         self.halted = halted;
+    }
+
+    pub fn stop(&mut self) {
+        panic!("STOP instruction executed");
     }
 }

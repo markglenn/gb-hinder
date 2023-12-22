@@ -5,14 +5,14 @@ use super::Target;
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
 pub enum CBOpcode {
-    RLC,
+    RLC(Target),
     RRC,
     RL(Target),
-    RR,
+    RR(Target),
     SLA,
     SRA,
     SWAP,
-    SRL,
+    SRL(Target),
     BIT(BitStatus, BitTarget, u8),
     RES,
     SET,
@@ -63,6 +63,9 @@ pub fn prefix_cb(cpu: &mut CPU) {
     match opcode {
         CBOpcode::BIT(BitStatus::High, target, bit) => bit_h(cpu, target, bit),
         CBOpcode::RL(target) => rl(cpu, target),
+        CBOpcode::SRL(target) => srl(cpu, target),
+        CBOpcode::RR(target) => rr(cpu, target),
+        CBOpcode::RLC(target) => rlc(cpu, target),
         _ => panic!("Unimplemented bit opcode: 0x{:02X}", op),
     }
 }
@@ -113,6 +116,46 @@ pub fn rl(cpu: &mut CPU, target: &Target) {
     target.set_value(cpu, value);
 }
 
+pub fn rlc(cpu: &mut CPU, target: &Target) {
+    let value = target.get_value(cpu);
+
+    let result = value.rotate_left(1);
+
+    cpu.registers.f.set_zero(result == 0);
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(value & 0x80 != 0);
+
+    target.set_value(cpu, result);
+}
+
+pub fn rr(cpu: &mut CPU, target: &Target) {
+    let value = target.get_value(cpu);
+    let carry = if cpu.registers.f.carry() { 0x80 } else { 0 };
+
+    let result = (value >> 1) | carry;
+
+    cpu.registers.f.set_zero(result == 0);
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(value & 0x01 != 0);
+
+    target.set_value(cpu, result);
+}
+
+pub fn srl(cpu: &mut CPU, target: &Target) {
+    let value = target.get_value(cpu);
+
+    let result = value >> 1;
+
+    cpu.registers.f.set_zero(result == 0);
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(value & 0x01 != 0);
+
+    target.set_value(cpu, result);
+}
+
 pub static CB_OPCODES: [CBOpcode; 0x100] = [
     // 0x00
     CBOpcode::Undefined,
@@ -132,22 +175,22 @@ pub static CB_OPCODES: [CBOpcode; 0x100] = [
     CBOpcode::Undefined,
     CBOpcode::Undefined,
     // 0x10
-    CBOpcode::Undefined,
+    CBOpcode::RL(Target::B),
     CBOpcode::RL(Target::C),
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
+    CBOpcode::RL(Target::D),
+    CBOpcode::RL(Target::E),
+    CBOpcode::RL(Target::H),
+    CBOpcode::RL(Target::L),
+    CBOpcode::RL(Target::MHL),
+    CBOpcode::RL(Target::A),
+    CBOpcode::RR(Target::B),
+    CBOpcode::RR(Target::C),
+    CBOpcode::RR(Target::D),
+    CBOpcode::RR(Target::E),
+    CBOpcode::RR(Target::H),
+    CBOpcode::RR(Target::L),
+    CBOpcode::RR(Target::MHL),
+    CBOpcode::RR(Target::A),
     // 0x20
     CBOpcode::Undefined,
     CBOpcode::Undefined,
@@ -174,14 +217,14 @@ pub static CB_OPCODES: [CBOpcode; 0x100] = [
     CBOpcode::Undefined,
     CBOpcode::Undefined,
     CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
+    CBOpcode::SRL(Target::B),
+    CBOpcode::SRL(Target::C),
+    CBOpcode::SRL(Target::D),
+    CBOpcode::SRL(Target::E),
+    CBOpcode::SRL(Target::H),
+    CBOpcode::SRL(Target::L),
+    CBOpcode::SRL(Target::MHL),
+    CBOpcode::SRL(Target::A),
     // 0x40
     CBOpcode::Undefined,
     CBOpcode::Undefined,

@@ -12,9 +12,8 @@ pub fn call(cpu: &mut CPU, condition: &Condition) {
 }
 
 pub fn ret(cpu: &mut CPU, condition: &Condition) {
-    let address = cpu.pop_word();
-
     if condition.test(cpu) {
+        let address = cpu.pop_word();
         cpu.pc = address;
     }
 }

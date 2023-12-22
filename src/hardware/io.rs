@@ -44,6 +44,8 @@ impl Interrupts {
 impl Memory for IO {
     fn read(&self, address: u16) -> u8 {
         match address {
+            // Hard coded for Gameboy Doctor
+            0xFF44 => 0x90,
             _ => 0x00,
         }
     }

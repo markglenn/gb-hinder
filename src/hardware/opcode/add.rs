@@ -4,7 +4,8 @@ use crate::hardware::cpu::CPU;
 pub fn add(cpu: &mut CPU, target: &Target) {
     let value = target.get_value(cpu);
 
-    let (result, carry) = cpu.registers.a.overflowing_add(value);
+    let a = cpu.registers.a;
+    let (result, carry) = a.overflowing_add(value);
 
     cpu.registers.a = result;
 
@@ -12,7 +13,7 @@ pub fn add(cpu: &mut CPU, target: &Target) {
     cpu.registers.f.set_subtract(false);
     cpu.registers
         .f
-        .set_half_carry((cpu.registers.a & 0x0F) + (value & 0x0F) > 0x0F);
+        .set_half_carry((a & 0x0F) + (value & 0x0F) > 0x0F);
     cpu.registers.f.set_carry(carry);
 }
 
@@ -20,13 +21,13 @@ pub fn add16(cpu: &mut CPU, target: &Target16) {
     let a = cpu.registers.hl() as u32;
     let b = target.get_value(cpu) as u32;
 
-    let new_value = a.wrapping_add(b);
+    let new_value = a + b;
 
     cpu.registers.f.set_subtract(false);
     cpu.registers
         .f
         .set_half_carry((a ^ b ^ new_value) & 0x1000 != 0);
-    cpu.registers.f.set_carry((a ^ b ^ new_value) & 0x1000 != 0);
+    cpu.registers.f.set_carry(new_value > 0xFFFF);
 
     cpu.registers.set_hl(new_value as u16);
 }
