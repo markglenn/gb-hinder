@@ -53,9 +53,6 @@ impl CPU {
             // panic!("100 instructions executed")
         }
 
-        // Wait for key input to pause the emulator
-        let mut input = String::new();
-
         execute_opcode(self, opcode)
     }
 

@@ -112,7 +112,7 @@ impl Display for Target {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Target16 {
     AF,
     BC,

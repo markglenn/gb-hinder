@@ -11,5 +11,9 @@ pub fn push(cpu: &mut cpu::CPU, target: &Target16) {
 pub fn pop(cpu: &mut cpu::CPU, target: &Target16) {
     let value = cpu.pop_word();
 
-    target.set_value(cpu, value);
+    if target == &Target16::AF {
+        target.set_value(cpu, value & 0xFFF0);
+    } else {
+        target.set_value(cpu, value);
+    }
 }

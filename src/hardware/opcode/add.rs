@@ -67,3 +67,29 @@ pub fn sub(cpu: &mut CPU, target: &Target) {
         .set_half_carry((cpu.registers.a & 0x0F) + (value & 0x0F) > 0x0F);
     cpu.registers.f.set_carry(carry);
 }
+
+pub fn daa(cpu: &mut CPU) {
+    let mut a = cpu.registers.a;
+    let mut adjust = if cpu.registers.f.carry() { 0x60 } else { 0x00 };
+
+    if cpu.registers.f.half_carry() {
+        adjust |= 0x06;
+    };
+
+    if !cpu.registers.f.subtract() {
+        if a & 0x0F > 0x09 {
+            adjust |= 0x06;
+        };
+        if a > 0x99 {
+            adjust |= 0x60;
+        };
+        a = a.wrapping_add(adjust);
+    } else {
+        a = a.wrapping_sub(adjust);
+    }
+
+    cpu.registers.f.set_carry(adjust >= 0x60);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_zero(a == 0);
+    cpu.registers.a = a;
+}
