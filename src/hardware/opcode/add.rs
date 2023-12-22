@@ -32,6 +32,22 @@ pub fn add16(cpu: &mut CPU, target: &Target16) {
     cpu.registers.set_hl(new_value as u16);
 }
 
+pub fn ld_add(cpu: &mut CPU, target: &Target16) {
+    let a = cpu.sp as u16;
+    let b = cpu.next_byte() as i8 as i16 as u16;
+
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_zero(false);
+    cpu.registers
+        .f
+        .set_half_carry((a & 0x000F) + (b & 0x000F) > 0x000F);
+    cpu.registers
+        .f
+        .set_carry((a & 0x00FF) + (b & 0x00FF) > 0x00FF);
+
+    target.set_value(cpu, a.wrapping_add(b));
+}
+
 pub fn adc(cpu: &mut CPU, target: &Target) {
     let a = cpu.registers.a as u16;
     let b = target.get_value(cpu) as u16;

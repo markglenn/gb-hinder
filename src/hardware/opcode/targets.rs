@@ -121,6 +121,7 @@ pub enum Target16 {
     SP,
     MHL,
     Immediate,
+    MImmediate,
 }
 
 impl Target16 {
@@ -133,6 +134,10 @@ impl Target16 {
             Target16::SP => cpu.sp,
             Target16::MHL => cpu.bus.read_word(cpu.registers.hl()),
             Target16::Immediate => cpu.next_word(),
+            Target16::MImmediate => {
+                let next_word = cpu.next_word();
+                cpu.bus.read_word(next_word)
+            }
         }
     }
 
@@ -145,6 +150,10 @@ impl Target16 {
             Target16::SP => cpu.sp = value,
             Target16::MHL => unreachable!(),
             Target16::Immediate => unreachable!(),
+            Target16::MImmediate => {
+                let next_word = cpu.next_word();
+                cpu.bus.write_word(next_word, value);
+            }
         }
     }
 
@@ -157,6 +166,7 @@ impl Target16 {
             Target16::SP => "SP".to_owned(),
             Target16::MHL => "[HL]".to_owned(),
             Target16::Immediate => format!("{:04X}", cpu.bus.read_word(cpu.pc)),
+            Target16::MImmediate => format!("Unknown"),
         }
     }
 }
@@ -171,6 +181,7 @@ impl Display for Target16 {
             Target16::SP => write!(f, "SP"),
             Target16::MHL => write!(f, "(HL)"),
             Target16::Immediate => write!(f, "d16"),
+            Target16::MImmediate => write!(f, "(d16)"),
         }
     }
 }
