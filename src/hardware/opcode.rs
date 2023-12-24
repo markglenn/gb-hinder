@@ -18,6 +18,7 @@ use super::cpu::CPU;
 pub enum Opcode {
     NOP,
     RET(Condition),
+    RETI,
     DI,
     EI,
     CPL,
@@ -57,7 +58,6 @@ pub enum Opcode {
     HALT,
     STOP,
     INV,
-    Undefined,
 }
 
 impl Display for Opcode {
@@ -65,6 +65,7 @@ impl Display for Opcode {
         match self {
             Self::NOP => write!(f, "NOP"),
             Self::RET(condition) => write!(f, "RET {}", condition),
+            Self::RETI => write!(f, "RETI"),
             Self::DI => write!(f, "DI"),
             Self::EI => write!(f, "EI"),
             Self::CPL => write!(f, "CPL"),
@@ -105,7 +106,6 @@ impl Display for Opcode {
             Self::HALT => write!(f, "HALT"),
             Self::STOP => write!(f, "STOP"),
             Self::INV => write!(f, "X-X-X-X-X INVALID"),
-            Self::Undefined => write!(f, "UNDEFINED"),
         }
     }
 }
@@ -179,6 +179,7 @@ pub fn execute_opcode(cpu: &mut CPU, opcode: &Opcode) -> u8 {
         Opcode::DEC16(target) => inc::dec16(cpu, target),
         Opcode::CALL(condition) => jump::call(cpu, condition),
         Opcode::RET(condition) => jump::ret(cpu, condition),
+        Opcode::RETI => jump::reti(cpu),
         Opcode::PUSH(target) => stack::push(cpu, target),
         Opcode::POP(target) => stack::pop(cpu, target),
         Opcode::RL(target) => bits::rl(cpu, target, false),
@@ -190,7 +191,6 @@ pub fn execute_opcode(cpu: &mut CPU, opcode: &Opcode) -> u8 {
         Opcode::HALT => cpu.set_halted(true),
         Opcode::STOP => cpu.stop(),
         Opcode::INV => panic!("Invalid opcode found"),
-        Opcode::Undefined => panic!("Attempted to execute undefined opcode"),
     }
 
     1
@@ -428,7 +428,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::SUB(Target::Immediate),
     Opcode::RST(0x10),
     Opcode::RET(Condition::Carry),
-    Opcode::Undefined,
+    Opcode::RETI,
     Opcode::JP(Condition::Carry, Target16::Immediate),
     Opcode::INV,
     Opcode::CALL(Condition::Carry),
@@ -439,8 +439,8 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::LDH(Target::ZeroImmediate, Target::A),
     Opcode::POP(Target16::HL),
     Opcode::LD(Target::MC, Target::A),
-    Opcode::Undefined,
-    Opcode::Undefined,
+    Opcode::INV,
+    Opcode::INV,
     Opcode::PUSH(Target16::HL),
     Opcode::AND(Target::Immediate),
     Opcode::RST(0x20),

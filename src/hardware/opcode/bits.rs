@@ -16,8 +16,6 @@ pub enum CBOpcode {
     BIT(BitTarget, u8),
     RES(BitTarget, u8),
     SET(BitTarget, u8),
-
-    Undefined,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -84,7 +82,6 @@ pub fn prefix_cb(cpu: &mut CPU) {
         CBOpcode::RLC(target) => rlc(cpu, target, true),
         CBOpcode::RRC(target) => rrc(cpu, target, true),
         CBOpcode::SWAP(target) => swap(cpu, target),
-        _ => panic!("Unimplemented bit opcode: 0x{:02X}", op),
     }
 }
 

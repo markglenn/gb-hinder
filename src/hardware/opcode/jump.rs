@@ -18,6 +18,11 @@ pub fn ret(cpu: &mut CPU, condition: &Condition) {
     }
 }
 
+pub fn reti(cpu: &mut CPU) {
+    cpu.pc = cpu.pop_word();
+    cpu.ime = true;
+}
+
 pub fn rst(cpu: &mut CPU, address: u16) {
     cpu.push_word(cpu.pc);
     cpu.pc = address;
