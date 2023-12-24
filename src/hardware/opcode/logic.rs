@@ -29,3 +29,18 @@ pub fn xor(cpu: &mut CPU, target: &Target) {
     cpu.registers.f.set_half_carry(false);
     cpu.registers.f.set_carry(false);
 }
+
+// Set carry flag
+pub fn scf(cpu: &mut CPU) {
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(true);
+}
+
+// Complement carry flag
+pub fn ccf(cpu: &mut CPU) {
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+
+    cpu.registers.f.set_carry(!cpu.registers.f.carry());
+}

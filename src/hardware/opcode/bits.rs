@@ -6,12 +6,12 @@ use super::Target;
 #[allow(dead_code)]
 pub enum CBOpcode {
     RLC(Target),
-    RRC,
+    RRC(Target),
     RL(Target),
     RR(Target),
-    SLA,
-    SRA,
-    SWAP,
+    SLA(Target),
+    SRA(Target),
+    SWAP(Target),
     SRL(Target),
     BIT(BitStatus, BitTarget, u8),
     RES,
@@ -62,10 +62,14 @@ pub fn prefix_cb(cpu: &mut CPU) {
 
     match opcode {
         CBOpcode::BIT(BitStatus::High, target, bit) => bit_h(cpu, target, bit),
-        CBOpcode::RL(target) => rl(cpu, target),
+        CBOpcode::RL(target) => rl(cpu, target, true),
         CBOpcode::SRL(target) => srl(cpu, target),
+        CBOpcode::SLA(target) => sla(cpu, target),
+        CBOpcode::SRA(target) => sra(cpu, target),
         CBOpcode::RR(target) => rr(cpu, target),
-        CBOpcode::RLC(target) => rlc(cpu, target),
+        CBOpcode::RLC(target) => rlc(cpu, target, true),
+        CBOpcode::RRC(target) => rrc(cpu, target, true),
+        CBOpcode::SWAP(target) => swap(cpu, target),
         _ => panic!("Unimplemented bit opcode: 0x{:02X}", op),
     }
 }
@@ -103,28 +107,40 @@ pub fn rra(cpu: &mut CPU) {
     cpu.registers.f.set_carry(newcarry);
 }
 
-pub fn rl(cpu: &mut CPU, target: &Target) {
+pub fn rl(cpu: &mut CPU, target: &Target, allow_zero: bool) {
     let value = target.get_value(cpu);
+    let carry = if cpu.registers.f.carry() { 1 } else { 0 };
 
-    let result = value.rotate_left(1);
+    let result = (value << 1) | carry;
 
-    cpu.registers.f.set_zero(result == 0);
+    cpu.registers.f.set_zero(allow_zero && result == 0);
     cpu.registers.f.set_subtract(false);
     cpu.registers.f.set_half_carry(false);
     cpu.registers.f.set_carry(value & 0x80 != 0);
 
-    target.set_value(cpu, value);
+    target.set_value(cpu, result);
 }
 
-pub fn rlc(cpu: &mut CPU, target: &Target) {
+pub fn rlc(cpu: &mut CPU, target: &Target, allow_zero: bool) {
     let value = target.get_value(cpu);
-
     let result = value.rotate_left(1);
 
-    cpu.registers.f.set_zero(result == 0);
+    cpu.registers.f.set_zero(allow_zero && result == 0);
     cpu.registers.f.set_subtract(false);
     cpu.registers.f.set_half_carry(false);
     cpu.registers.f.set_carry(value & 0x80 != 0);
+
+    target.set_value(cpu, result);
+}
+
+pub fn rrc(cpu: &mut CPU, target: &Target, allow_zero: bool) {
+    let value = target.get_value(cpu);
+    let result = value.rotate_right(1);
+
+    cpu.registers.f.set_zero(allow_zero && result == 0);
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(value & 0x01 == 0x01);
 
     target.set_value(cpu, result);
 }
@@ -156,24 +172,61 @@ pub fn srl(cpu: &mut CPU, target: &Target) {
     target.set_value(cpu, result);
 }
 
+pub fn swap(cpu: &mut CPU, target: &Target) {
+    let value = target.get_value(cpu);
+
+    let result = (value << 4) | (value >> 4);
+
+    cpu.registers.f.set_zero(result == 0);
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(false);
+
+    target.set_value(cpu, result);
+}
+
+pub fn sla(cpu: &mut CPU, target: &Target) {
+    let value = target.get_value(cpu);
+    let result = value << 1;
+
+    cpu.registers.f.set_zero(result == 0);
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(value & 0x80 != 0);
+
+    target.set_value(cpu, result);
+}
+
+pub fn sra(cpu: &mut CPU, target: &Target) {
+    let value = target.get_value(cpu);
+    let result = value >> 1 | value & 0x80;
+
+    cpu.registers.f.set_zero(result == 0);
+    cpu.registers.f.set_subtract(false);
+    cpu.registers.f.set_half_carry(false);
+    cpu.registers.f.set_carry(value & 0x01 != 0);
+
+    target.set_value(cpu, result);
+}
+
 pub static CB_OPCODES: [CBOpcode; 0x100] = [
     // 0x00
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
+    CBOpcode::RLC(Target::B),
+    CBOpcode::RLC(Target::C),
+    CBOpcode::RLC(Target::D),
+    CBOpcode::RLC(Target::E),
+    CBOpcode::RLC(Target::H),
+    CBOpcode::RLC(Target::L),
+    CBOpcode::RLC(Target::MHL),
+    CBOpcode::RLC(Target::A),
+    CBOpcode::RRC(Target::B),
+    CBOpcode::RRC(Target::C),
+    CBOpcode::RRC(Target::D),
+    CBOpcode::RRC(Target::E),
+    CBOpcode::RRC(Target::H),
+    CBOpcode::RRC(Target::L),
+    CBOpcode::RRC(Target::MHL),
+    CBOpcode::RRC(Target::A),
     // 0x10
     CBOpcode::RL(Target::B),
     CBOpcode::RL(Target::C),
@@ -192,31 +245,31 @@ pub static CB_OPCODES: [CBOpcode; 0x100] = [
     CBOpcode::RR(Target::MHL),
     CBOpcode::RR(Target::A),
     // 0x20
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
+    CBOpcode::SLA(Target::B),
+    CBOpcode::SLA(Target::C),
+    CBOpcode::SLA(Target::D),
+    CBOpcode::SLA(Target::E),
+    CBOpcode::SLA(Target::H),
+    CBOpcode::SLA(Target::L),
+    CBOpcode::SLA(Target::MHL),
+    CBOpcode::SLA(Target::A),
+    CBOpcode::SRA(Target::B),
+    CBOpcode::SRA(Target::C),
+    CBOpcode::SRA(Target::D),
+    CBOpcode::SRA(Target::E),
+    CBOpcode::SRA(Target::H),
+    CBOpcode::SRA(Target::L),
+    CBOpcode::SRA(Target::MHL),
+    CBOpcode::SRA(Target::A),
     // 0x30
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
-    CBOpcode::Undefined,
+    CBOpcode::SWAP(Target::B),
+    CBOpcode::SWAP(Target::C),
+    CBOpcode::SWAP(Target::D),
+    CBOpcode::SWAP(Target::E),
+    CBOpcode::SWAP(Target::H),
+    CBOpcode::SWAP(Target::L),
+    CBOpcode::SWAP(Target::MHL),
+    CBOpcode::SWAP(Target::A),
     CBOpcode::SRL(Target::B),
     CBOpcode::SRL(Target::C),
     CBOpcode::SRL(Target::D),

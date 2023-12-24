@@ -1,4 +1,3 @@
-mod add;
 mod bits;
 mod cp;
 mod inc;
@@ -6,6 +5,7 @@ mod interrupt;
 mod jump;
 mod ld;
 mod logic;
+mod math;
 mod stack;
 mod targets;
 
@@ -20,6 +20,9 @@ pub enum Opcode {
     RET(Condition),
     DI,
     EI,
+    CPL,
+    SCF,
+    CCF,
     AND(Target),
     OR(Target),
     LD(Target, Target),
@@ -43,6 +46,7 @@ pub enum Opcode {
     POP(Target16),
     RL(Target),
     RLCA,
+    RRCA,
     RRA,
     CALL(Condition),
     JR(Condition),
@@ -56,52 +60,6 @@ pub enum Opcode {
     Undefined,
 }
 
-impl Opcode {
-    pub fn debug_fmt(&self, cpu: &CPU) -> String {
-        match self {
-            Self::NOP => format!("NOP"),
-            Self::RET(condition) => format!("RET {}", condition),
-            Self::DI => format!("DI"),
-            Self::EI => format!("EI"),
-            Self::AND(target) => format!("AND {}", target.debug_fmt(cpu)),
-            Self::OR(target) => format!("OR {}", target.debug_fmt(cpu)),
-            Self::LD(target, from) => format!("LD {}, {}", target, from),
-            Self::LD16(target, from) => format!("LD {}, {}", target, from),
-            Self::LDD(target, from) => format!("LDD {}, {}", target, from),
-            Self::LDH(target, from) => format!("LDH {}, {}", target, from),
-            Self::LDI(target, from) => format!("LDI {}, {}", target, from),
-            Self::ADD(target) => format!("ADD {}", target),
-            Self::ADD16(target) => format!("ADD {}", target),
-            Self::LDADD(target) => format!("LD {}, SP+d8", target),
-            Self::DAA => format!("DAA"),
-            Self::SUB(target) => format!("SUB {}", target),
-            Self::ADC(target) => format!("ADC {}", target),
-            Self::SBC(target) => format!("SBC {}", target),
-            Self::XOR(target) => format!("XOR {}", target),
-            Self::INC(target) => format!("INC {}", target),
-            Self::INC16(target) => format!("INC {}", target),
-            Self::DEC(target) => format!("DEC {}", target),
-            Self::DEC16(target) => format!("DEC {}", target),
-            Self::PUSH(target) => format!("PUSH {}", target),
-            Self::POP(target) => format!("POP {}", target),
-            Self::RL(target) => format!("RL{}", target),
-            Self::RLCA => format!("RLCA"),
-            Self::RRA => format!("RRA"),
-            Self::CALL(Condition::None) => format!("CALL a16"),
-            Self::CALL(condition) => format!("CALL {},a16", condition),
-            Self::JR(condition) => format!("JR {}", condition),
-            Self::JP(condition, target) => format!("JP {}, {}", condition, target),
-            Self::RST(address) => format!("RST {}", address),
-            Self::PrefixCB => format!(""),
-            Self::CP(target) => format!("CP {}", target),
-            Self::HALT => format!("HALT"),
-            Self::STOP => format!("STOP"),
-            Self::INV => format!("X-for-X INVALID"),
-            Self::Undefined => format!("UNDEFINED"),
-        }
-    }
-}
-
 impl Display for Opcode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -109,6 +67,9 @@ impl Display for Opcode {
             Self::RET(condition) => write!(f, "RET {}", condition),
             Self::DI => write!(f, "DI"),
             Self::EI => write!(f, "EI"),
+            Self::CPL => write!(f, "CPL"),
+            Self::SCF => write!(f, "SCF"),
+            Self::CCF => write!(f, "CCF"),
             Self::AND(target) => write!(f, "AND {}", target),
             Self::OR(target) => write!(f, "OR {}", target),
             Self::LD(target, from) => write!(f, "LD {}, {}", target, from),
@@ -131,6 +92,7 @@ impl Display for Opcode {
             Self::PUSH(target) => write!(f, "PUSH {}", target),
             Self::POP(target) => write!(f, "POP {}", target),
             Self::RL(target) => write!(f, "RL{}", target),
+            Self::RRCA => write!(f, "RRCA"),
             Self::RLCA => write!(f, "RLCA"),
             Self::RRA => write!(f, "RRA"),
             Self::CALL(Condition::None) => write!(f, "CALL a16"),
@@ -182,18 +144,21 @@ pub fn execute_opcode(cpu: &mut CPU, opcode: &Opcode) -> u8 {
     match opcode {
         Opcode::NOP => nop(cpu),
 
-        Opcode::ADD(target) => add::add(cpu, target),
-        Opcode::ADD16(target) => add::add16(cpu, target),
-        Opcode::ADC(target) => add::adc(cpu, target),
-        Opcode::SBC(target) => add::sbc(cpu, target),
-        Opcode::SUB(target) => add::sub(cpu, target),
-        Opcode::DAA => add::daa(cpu),
+        Opcode::ADD(target) => math::add(cpu, target),
+        Opcode::ADD16(target) => math::add16(cpu, target),
+        Opcode::ADC(target) => math::adc(cpu, target),
+        Opcode::SBC(target) => math::sbc(cpu, target),
+        Opcode::SUB(target) => math::sub(cpu, target),
+        Opcode::DAA => math::daa(cpu),
+        Opcode::CPL => math::cpl(cpu),
+        Opcode::SCF => logic::scf(cpu),
+        Opcode::CCF => logic::ccf(cpu),
 
         Opcode::DI => interrupt::enable_interrupt(cpu, false),
         Opcode::EI => interrupt::enable_interrupt(cpu, true),
 
         Opcode::LD16(target, from) => ld::ld16(cpu, target, from),
-        Opcode::LDADD(target) => add::ld_add(cpu, target),
+        Opcode::LDADD(target) => math::ld_add(cpu, target),
         Opcode::LDD(target, from) => ld::ldd(cpu, target, from),
         Opcode::LDH(target, from) => ld::ldh(cpu, target, from),
         Opcode::LDI(target, from) => ld::ldi(cpu, target, from),
@@ -216,8 +181,9 @@ pub fn execute_opcode(cpu: &mut CPU, opcode: &Opcode) -> u8 {
         Opcode::RET(condition) => jump::ret(cpu, condition),
         Opcode::PUSH(target) => stack::push(cpu, target),
         Opcode::POP(target) => stack::pop(cpu, target),
-        Opcode::RL(target) => bits::rl(cpu, target),
-        Opcode::RLCA => bits::rlc(cpu, &Target::A),
+        Opcode::RL(target) => bits::rl(cpu, target, false),
+        Opcode::RRCA => bits::rrc(cpu, &Target::A, false),
+        Opcode::RLCA => bits::rlc(cpu, &Target::A, false),
         Opcode::RRA => bits::rra(cpu),
         Opcode::CP(target) => cp::cp(cpu, target),
 
@@ -247,7 +213,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::INC(Target::C),
     Opcode::DEC(Target::C),
     Opcode::LD(Target::C, Target::Immediate),
-    Opcode::Undefined,
+    Opcode::RRCA,
     // 0x10 - 0x1F
     Opcode::STOP,
     Opcode::LD16(Target16::DE, Target16::Immediate),
@@ -281,7 +247,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::INC(Target::L),
     Opcode::DEC(Target::L),
     Opcode::LD(Target::L, Target::Immediate),
-    Opcode::Undefined,
+    Opcode::CPL,
     // 0x30 - 0x3F
     Opcode::JR(Condition::NotCarry),
     Opcode::LD16(Target16::SP, Target16::Immediate),
@@ -290,7 +256,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::INC(Target::MHL),
     Opcode::DEC(Target::MHL),
     Opcode::LD(Target::MHL, Target::Immediate),
-    Opcode::Undefined,
+    Opcode::SCF,
     Opcode::JR(Condition::Carry),
     Opcode::ADD16(Target16::SP),
     Opcode::LDD(Target::A, Target::MHL),
@@ -298,7 +264,7 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::INC(Target::A),
     Opcode::DEC(Target::A),
     Opcode::LD(Target::A, Target::Immediate),
-    Opcode::Undefined,
+    Opcode::CCF,
     // 0x40 - 0x4F
     Opcode::LD(Target::B, Target::B),
     Opcode::LD(Target::B, Target::C),
@@ -393,14 +359,14 @@ pub static OPCODES: [Opcode; 0x100] = [
     Opcode::SUB(Target::L),
     Opcode::SUB(Target::MHL),
     Opcode::SUB(Target::A),
-    Opcode::Undefined,
-    Opcode::Undefined,
-    Opcode::Undefined,
-    Opcode::Undefined,
-    Opcode::Undefined,
-    Opcode::Undefined,
-    Opcode::Undefined,
-    Opcode::Undefined,
+    Opcode::SBC(Target::B),
+    Opcode::SBC(Target::C),
+    Opcode::SBC(Target::D),
+    Opcode::SBC(Target::E),
+    Opcode::SBC(Target::H),
+    Opcode::SBC(Target::L),
+    Opcode::SBC(Target::MHL),
+    Opcode::SBC(Target::A),
     // 0xA0 - 0xAF
     Opcode::AND(Target::B),
     Opcode::AND(Target::C),

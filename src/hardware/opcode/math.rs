@@ -125,3 +125,11 @@ pub fn daa(cpu: &mut CPU) {
     cpu.registers.f.set_zero(a == 0);
     cpu.registers.a = a;
 }
+
+// Complement A register
+pub fn cpl(cpu: &mut CPU) {
+    cpu.registers.a = !cpu.registers.a;
+
+    cpu.registers.f.set_subtract(true);
+    cpu.registers.f.set_half_carry(true);
+}
