@@ -85,7 +85,7 @@ impl Registers {
         self.c = (value & 0x00FF) as u8;
     }
 
-    pub fn set_de(&mut self, value: u16) {
+    pub fn interrupt_disable_counter(&mut self, value: u16) {
         self.d = ((value & 0xFF00) >> 8) as u8;
         self.e = (value & 0x00FF) as u8;
     }

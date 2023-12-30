@@ -105,7 +105,7 @@ impl Display for Opcode {
             Self::CP(target) => write!(f, "CP {}", target),
             Self::HALT => write!(f, "HALT"),
             Self::STOP => write!(f, "STOP"),
-            Self::INV => write!(f, "X-X-X-X-X INVALID"),
+            Self::INV => write!(f, "INVALID"),
         }
     }
 }

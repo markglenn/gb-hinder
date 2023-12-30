@@ -1,6 +1,5 @@
 use super::io::serial::Serial;
 use super::io::timer::Timer;
-use super::io::Interrupts;
 use super::{boot_rom::BootROM, cartridge::Cartridge, io::IO, mbc::MBC1, Memory, RAM};
 
 // The gameboy does not necessarily have a bus, but a bus is a close
@@ -13,7 +12,8 @@ pub struct Bus {
     boot_rom: Option<BootROM>,
     io: IO,
     timer: Timer,
-    interrupts: Interrupts,
+    pub interrupt_enable: u8,
+    pub interrupt_flags: u8,
     serial: Serial,
 }
 
@@ -29,7 +29,8 @@ impl Bus {
             zero_page: RAM::new(0x7F),
             io: IO {},
             timer: Timer {},
-            interrupts: Interrupts::new(),
+            interrupt_enable: 0,
+            interrupt_flags: 0,
             serial: Serial::new(),
         }
     }
@@ -66,6 +67,9 @@ impl Memory for Bus {
             // Timer
             0xFF04..=0xFF07 => self.timer.read(address),
 
+            // Interrupt status
+            0xFF0F => self.interrupt_flags,
+
             // IO Ports
             0xFF00..=0xFF7F => self.io.read(address),
 
@@ -73,7 +77,7 @@ impl Memory for Bus {
             0xFF80..=0xFFFE => self.zero_page.read(address - 0xFF80),
 
             // Interrupt enabled register
-            0xFFFF => self.interrupts.into(),
+            0xFFFF => self.interrupt_enable,
 
             _ => panic!("Attempted to read from invalid address: 0x{:04X}", address),
         }
@@ -106,7 +110,7 @@ impl Memory for Bus {
             0xFF04..=0xFF07 => self.timer.write(address, value),
 
             // Interrupt status
-            0xFF0F => self.interrupts.set_status(value),
+            0xFF0F => self.interrupt_flags = value,
 
             // IO Ports
             0xFF00..=0xFF7F => self.io.write(address, value),
@@ -115,7 +119,7 @@ impl Memory for Bus {
             0xFF80..=0xFFFE => self.zero_page.write(address - 0xFF80, value),
 
             // Interrupt enabled register
-            0xFFFF => self.interrupts = value.into(),
+            0xFFFF => self.interrupt_enable = value,
 
             _ => panic!("Attempted to write to invalid address: 0x{:04X}", address),
         }

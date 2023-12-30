@@ -1,17 +1,30 @@
+use super::{bus::Bus, opcode::Opcode, registers::Registers, Memory};
 use crate::hardware::opcode::execute_opcode;
 
-use super::{bus::Bus, opcode::Opcode, registers::Registers, Memory};
-
 pub struct CPU {
+    // Standard registers
     pub registers: Registers,
+
+    // Program counter
     pub pc: u16,
+
+    // Stack pointer
     pub sp: u16,
+
+    // Interrupt master enable
     pub ime: bool,
 
+    // Halt flag
     pub halted: bool,
 
+    // Address bus
     pub bus: Bus,
-    pub instr_count: usize,
+
+    // These are used to delay the enabling/disabling of interrupts
+    pub interrupt_enable_counter: u8,
+    pub interrupt_disable_counter: u8,
+
+    // This is used to print out the state of the CPU after each instruction
     debug: bool,
 }
 
@@ -24,36 +37,89 @@ impl CPU {
             bus,
             ime: false,
             halted: false,
-            instr_count: 0,
-            debug: true,
+            debug: false,
+            interrupt_enable_counter: 0,
+            interrupt_disable_counter: 0,
         }
     }
 
     pub fn execute_next_instruction(&mut self) -> u8 {
-        let original_pc = self.pc;
-        let m0 = self.peek_byte_at_offset(0);
-        let m1 = self.peek_byte_at_offset(1);
-        let m2 = self.peek_byte_at_offset(2);
-        let m3 = self.peek_byte_at_offset(3);
+        self.update_ime();
+        self.handleinterrupt();
 
-        let op = self.next_byte();
+        if !self.debug {
+            // If we're not in debug mode, just execute the next instruction
+            let opcode = Opcode::from_byte(self.next_byte());
 
-        let opcode = Opcode::from_byte(op);
+            execute_opcode(self, opcode)
+        } else {
+            let original_pc = self.pc;
+            let m0 = self.peek_byte_at_offset(0);
+            let m1 = self.peek_byte_at_offset(1);
+            let m2 = self.peek_byte_at_offset(2);
+            let m3 = self.peek_byte_at_offset(3);
 
-        if self.debug {
+            let op = self.next_byte();
+
+            let opcode = Opcode::from_byte(op);
+
             println!(
                 "{} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
                 self.registers, self.sp, original_pc, m0, m1, m2, m3
             );
+
+            execute_opcode(self, opcode)
+        }
+    }
+
+    fn update_ime(&mut self) {
+        self.interrupt_enable_counter = match self.interrupt_enable_counter {
+            2 => 1,
+            1 => {
+                self.ime = true;
+                0
+            }
+            _ => 0,
+        };
+
+        self.interrupt_disable_counter = match self.interrupt_disable_counter {
+            2 => 1,
+            1 => {
+                self.ime = false;
+                0
+            }
+            _ => 0,
+        };
+    }
+
+    fn handleinterrupt(&mut self) -> u32 {
+        if self.ime == false && self.halted == false {
+            return 0;
         }
 
-        self.instr_count += 1;
-
-        if self.instr_count == 100000 {
-            // panic!("100 instructions executed")
+        let triggered = self.bus.interrupt_enable & self.bus.interrupt_flags;
+        if triggered == 0 {
+            return 0;
         }
 
-        execute_opcode(self, opcode)
+        self.halted = false;
+        if self.ime == false {
+            return 0;
+        }
+        self.ime = false;
+
+        let n = triggered.trailing_zeros() as u16;
+        if n >= 5 {
+            panic!("Invalid interrupt triggered");
+        }
+
+        // Disable the handled interrupt
+        self.bus.interrupt_flags &= !(1 << n);
+
+        self.push_word(self.pc);
+        self.pc = 0x0040 | (n << 3);
+
+        return 4;
     }
 
     // Reads the next byte and increments the program counter

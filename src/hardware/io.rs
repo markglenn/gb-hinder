@@ -30,22 +30,22 @@ pub struct Interrupts {
     joypad: bool,
 }
 
-impl Interrupts {
-    pub fn status(&self) -> u8 {
-        // TODO: Get interrupt statuses
-        0
-    }
-
-    pub fn set_status(&self, _value: u8) {
-        // TODO: Set interrupt statuses
-    }
-}
-
 impl Memory for IO {
     fn read(&self, address: u16) -> u8 {
         match address {
+            0xFF01 => {
+                println!("SB: 0x{:02X}", 0x00);
+                0x00
+            }
+            0xFF02 => {
+                println!("SC: 0x{:02X}", 0x00);
+                0x00
+            }
             // Hard coded for Gameboy Doctor
             0xFF44 => 0x90,
+
+            // Hard coded for Gameboy
+            0xFF4D => 0xFF,
             _ => 0x00,
         }
     }
@@ -53,6 +53,9 @@ impl Memory for IO {
     fn write(&mut self, address: u16, value: u8) {
         match address {
             0xFF00 => println!("JOYP: 0x{:02X}", value),
+
+            0xFF01 => println!("SB: 0x{:02X}", value),
+            0xFF02 => println!("SC: 0x{:02X}", value),
 
             // GPU
             0xFF40..=0xFF4B => {}

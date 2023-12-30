@@ -29,6 +29,9 @@ impl Memory for Serial {
                 self.data = value;
             }
             0xFF02 => {
+                if value == 0x81 {
+                    print!("{}", self.data as char);
+                }
                 self.control = value;
             }
 

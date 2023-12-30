@@ -71,7 +71,6 @@ impl Memory for MBC1 {
                 // Writing a 0 to this register will actually set the bank to 1
                 let value = if value == 0x00 { 0x01 } else { value };
 
-                println!("ROM BANK: {}", current_bank | (value & 0x1F));
                 self.set_rom_bank(current_bank | (value & 0x1F));
             }
 

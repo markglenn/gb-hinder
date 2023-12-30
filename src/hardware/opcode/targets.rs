@@ -145,7 +145,7 @@ impl Target16 {
         match self {
             Target16::AF => cpu.registers.set_af(value),
             Target16::BC => cpu.registers.set_bc(value),
-            Target16::DE => cpu.registers.set_de(value),
+            Target16::DE => cpu.registers.interrupt_disable_counter(value),
             Target16::HL => cpu.registers.set_hl(value),
             Target16::SP => cpu.sp = value,
             Target16::MHL => unreachable!(),
